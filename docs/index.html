@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Machine Learning-Based Phishing Website Detection</title>
+  <meta name="description" content="Interactive presentation of a cybersecurity machine learning project: comparing a Decision Tree (81.41%) and a Random Forest (82.58%) for phishing website detection using URL features.">
+  <script>
+    /* Apply the saved theme before first paint to avoid a flash */
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t !== "light" && t !== "dark") {
+        t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128737;</text></svg>">
+</head>
+<body>
+
+<!-- ============================ HEADER ============================ -->
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href="#home">
+      <span class="brand-icon" aria-hidden="true">&#128737;</span>
+      <span class="brand-text">Phishing&nbsp;Detection<span class="brand-sub">ML project</span></span>
+    </a>
+
+    <button id="nav-toggle" class="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="site-nav">
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav id="site-nav" class="site-nav" aria-label="Main">
+      <a class="nav-link active" href="#home">Home</a>
+      <a class="nav-link" href="#phishing">Phishing</a>
+      <a class="nav-link" href="#dataset">Dataset</a>
+      <a class="nav-link" href="#dashboard">Dashboard</a>
+      <a class="nav-link" href="#features">Features</a>
+      <a class="nav-link" href="#analyzer">URL Analyzer</a>
+      <a class="nav-link" href="#errors">Errors &amp; Impact</a>
+      <a class="nav-link" href="#limitations">Limitations</a>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch theme">&#127769;</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================ HERO ============================= -->
+<section id="home" class="hero">
+  <div class="container">
+    <p class="eyebrow reveal">Cybersecurity &middot; Machine Learning &middot; Classroom Presentation</p>
+    <h1 class="reveal">Machine Learning-Based<br><span class="grad">Phishing Website Detection</span></h1>
+    <p class="lead reveal">
+      Phishing pages look almost identical to the real thing. This project asks a narrow,
+      practical question: <strong>can a model tell a phishing website from a legitimate one
+      using nothing but the shape of its URL?</strong> Two classifiers were trained and compared
+      on 100,077 web addresses — and the best one, a <strong>Random Forest, reached
+      <span id="hero-accuracy">82.58%</span> accuracy</strong>.
+    </p>
+
+    <div class="hero-actions reveal">
+      <a class="btn btn-primary" href="#analyzer">Try the URL Analyzer</a>
+      <a class="btn btn-ghost" href="#dashboard">See the results</a>
+    </div>
+
+    <div class="hero-stats reveal">
+      <div class="hero-stat"><strong id="stat-rf-accuracy">82.58%</strong><span>Random Forest accuracy</span></div>
+      <div class="hero-stat"><strong id="stat-dt-accuracy">81.41%</strong><span>Decision Tree accuracy</span></div>
+      <div class="hero-stat"><strong id="stat-rows">100,077</strong><span>URLs in the dataset</span></div>
+      <div class="hero-stat"><strong id="stat-features">19</strong><span>URL features analysed</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== PHISHING =========================== -->
+<section id="phishing" class="section">
+  <div class="container">
+    <p class="eyebrow reveal">01 &middot; Introduction</p>
+    <h2 class="reveal">What is a phishing website?</h2>
+
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>The attack</h3>
+        <p>
+          <strong>Phishing</strong> is a social-engineering attack in which a criminal sends a
+          link to a fake website that imitates a trusted one — a bank, a university login page,
+          a payment service. The victim types their username, password, or card number into
+          a page controlled by the attacker.
+        </p>
+        <p>
+          Phishing is one of the most common entry points for cyber attacks, and it works because
+          the fake page is <em>visually</em> indistinguishable from the original. What usually
+          gives it away is not how it looks — it is the <strong>address in the browser bar</strong>.
+        </p>
+        <div class="callout">
+          <strong>Why the URL matters:</strong> phishing URLs tend to be longer, contain extra
+          subdomains and hyphens (e.g. <code>secure-paypal.verify-login.com</code>, use
+          misleading characters such as <code>@</code>, and sit behind unusually deep paths.
+          Those are measurable, countable properties.
+        </div>
+      </div>
+
+      <div class="card reveal">
+        <h3>This project</h3>
+        <p>
+          The goal is to test whether machine learning can detect phishing from
+          <strong>numerical URL characteristics alone</strong> — without reading the page content,
+          without a browser, and without calling any external service.
+        </p>
+        <ol class="steps">
+          <li>Load the Kaggle <em>Web Page Phishing Dataset</em> (100,077 rows).</li>
+          <li>Clean it: remove duplicates and check for conflicting labels.</li>
+          <li>Turn every URL into <strong>19 numeric features</strong> (length, dots, hyphens, slashes…).</li>
+          <li>Train a <strong>Decision Tree</strong> and a <strong>Random Forest</strong>.</li>
+          <li>Compare accuracy, precision, recall and confusion matrices.</li>
+          <li>Analyse which features the model trusts most.</li>
+          <li>Discuss the security implications of the mistakes the model makes.</li>
+        </ol>
+        <p class="muted small">Tools: Python, Google Colab, Pandas, Scikit-learn, Matplotlib.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== DATASET =========================== -->
+<section id="dataset" class="section section-alt">
+  <div class="container">
+    <p class="eyebrow reveal">02 &middot; The data</p>
+    <h2 class="reveal">Dataset overview</h2>
+    <p class="section-intro reveal">
+      Source: <a href="https://www.kaggle.com/datasets/danielfernandon/web-page-phishing-dataset"
+      target="_blank" rel="noopener">Web Page Phishing Dataset (Kaggle)</a>. Every row is a URL
+      reduced to 19 counts, labelled <code>0</code> (legitimate) or <code>1</code> (phishing).
+      The original file contains no missing values, but it contains a great many duplicates.
+    </p>
+
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Key statistics</h3>
+        <div id="dataset-stats" class="stat-list"></div>
+        <div class="callout callout-warn">
+          <strong>78% of the original rows were duplicates.</strong> Leaving them in would have
+          let identical URLs appear on both sides of the train/test split, inflating accuracy.
+          1,913 feature combinations were even seen with <em>both</em> labels — the same features
+          can genuinely be both legitimate and phishing depending on the real destination.
+        </div>
+      </div>
+
+      <div class="card reveal">
+        <h3>Class balance before and after cleaning</h3>
+        <div class="chart-box tall">
+          <canvas id="chart-class-distribution" aria-label="Bar chart comparing legitimate and phishing counts before and after deduplication" role="img"></canvas>
+        </div>
+        <p class="muted small">
+          After removing duplicates the remaining 21,891 rows are
+          <strong>15,872 phishing</strong> and <strong>6,019 legitimate</strong> — so the modelling
+          data is dominated by phishing pages (72.6% of the training rows).
+        </p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Average URL length</h3>
+        <div class="chart-box"><canvas id="chart-url-length" aria-label="Average URL length: legitimate 23.59, phishing 66.49" role="img"></canvas></div>
+        <p class="muted">Phishing URLs in this dataset are almost <strong>3× longer</strong>
+        than legitimate ones (66.49 vs 23.59 characters).</p>
+      </div>
+      <div class="card reveal">
+        <h3>Average number of slashes</h3>
+        <div class="chart-box"><canvas id="chart-slashes" aria-label="Average slashes: legitimate 0.29, phishing 2.62" role="img"></canvas></div>
+        <p class="muted">Phishing URLs average <strong>2.62 slashes</strong> against
+        <strong>0.29</strong> for legitimate ones — the single strongest signal in the data.</p>
+      </div>
+    </div>
+
+    <div class="card reveal">
+      <h3>Train / test split</h3>
+      <p>
+        The cleaned data was split roughly 80/20 with
+        <code>GroupShuffleSplit(random_state=42)</code>, grouping rows with
+        <strong>identical feature values</strong> so no duplicate feature pattern could leak into
+        both sets.
+      </p>
+      <div class="split-bar" role="img" aria-label="17,523 training rows and 4,368 test rows">
+        <span class="split-train" style="width:80%">17,523 training rows</span>
+        <span class="split-test" style="width:20%">4,368 test</span>
+      </div>
+      <p class="muted small">
+        Shared feature groups between train and test: <strong>0</strong>. The test set is
+        73.8% phishing — an important number when reading the accuracy results below.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== DASHBOARD ========================== -->
+<section id="dashboard" class="section">
+  <div class="container">
+    <p class="eyebrow reveal">03 &middot; Results</p>
+    <h2 class="reveal">Model dashboard</h2>
+    <p class="section-intro reveal">
+      Both models were trained with the same split and evaluated on the same 4,368 unseen test
+      URLs. All figures below are the executed outputs of the notebook.
+    </p>
+
+    <div class="grid-2">
+      <div class="card model-card reveal">
+        <div class="model-head">
+          <h3>Decision Tree</h3><span class="badge">Baseline model</span>
+        </div>
+        <p class="big-metric">81.41%</p>
+        <p class="muted">accuracy on the test set</p>
+        <ul class="model-facts">
+          <li><span>Configuration</span><code>max_depth=10, random_state=42</code></li>
+          <li><span>Phishing recall</span><strong>0.89</strong></li>
+          <li><span>Legitimate recall</span><strong>0.60</strong></li>
+          <li><span>Correct / 4,368</span><strong>3,556</strong></li>
+        </ul>
+        <p class="muted small">One tree — fast and easy to explain, but it learns a single set of
+        rules and misses subtle patterns.</p>
+      </div>
+
+      <div class="card model-card model-card-winner reveal">
+        <div class="model-head">
+          <h3>Random Forest</h3><span class="badge badge-win">Best model</span>
+        </div>
+        <p class="big-metric">82.58%</p>
+        <p class="muted">accuracy on the test set</p>
+        <ul class="model-facts">
+          <li><span>Configuration</span><code>n_estimators=100, max_depth=10, random_state=42</code></li>
+          <li><span>Phishing recall</span><strong>0.94</strong></li>
+          <li><span>Legitimate recall</span><strong>0.50</strong></li>
+          <li><span>Correct / 4,368</span><strong>3,607</strong></li>
+        </ul>
+        <p class="muted small">100 trees voting together — better overall accuracy and much
+        better at catching phishing, at the cost of flagging more legitimate sites.</p>
+      </div>
+    </div>
+
+    <div class="card reveal">
+      <h3>Accuracy side by side</h3>
+      <div class="chart-box tall"><canvas id="chart-accuracy" aria-label="Bar chart comparing accuracy of both models against a baseline" role="img"></canvas></div>
+      <p class="muted small" id="accuracy-delta"></p>
+      <p class="muted small">
+        The third bar is an honest reference line: a model that simply answers
+        <em>"phishing"</em> for every URL would score <strong>73.83%</strong> on this test set,
+        because 73.8% of the test rows are phishing. Both real models beat it, but the gap is
+        smaller than the headline accuracy suggests — which is exactly why precision and recall
+        matter.
+      </p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Precision, recall &amp; F1</h3>
+        <div class="chart-box"><canvas id="chart-metrics-phishing" aria-label="Precision, recall and F1 for the phishing class" role="img"></canvas></div>
+        <div class="chart-box second"><canvas id="chart-metrics-legit" aria-label="Precision, recall and F1 for the legitimate class" role="img"></canvas></div>
+      </div>
+
+      <div class="card reveal">
+        <h3>Full classification report</h3>
+        <div class="table-wrap">
+          <table class="data-table" id="classification-report"></table>
+        </div>
+        <div class="callout">
+          <strong>Read this table carefully.</strong> The Random Forest finds
+          <strong>94%</strong> of phishing sites (recall 0.94) but only recognises
+          <strong>50%</strong> of legitimate sites (recall 0.50). The Decision Tree is more
+          balanced (0.89 / 0.60) but catches fewer attacks overall.
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Confusion matrix — Decision Tree</h3>
+        <div id="confusion-decisionTree"></div>
+        <figure class="nb-figure inline">
+          <img src="assets/confusion-matrix-decision-tree.png" alt="Original Decision Tree confusion matrix from the notebook" loading="lazy">
+          <figcaption><strong>Original notebook output</strong><span>Cell 10</span></figcaption>
+        </figure>
+      </div>
+      <div class="card reveal">
+        <h3>Confusion matrix — Random Forest</h3>
+        <div id="confusion-randomForest"></div>
+        <figure class="nb-figure inline">
+          <img src="assets/confusion-matrix-random-forest.png" alt="Original Random Forest confusion matrix from the notebook" loading="lazy">
+          <figcaption><strong>Original notebook output</strong><span>Cell 10</span></figcaption>
+        </figure>
+      </div>
+    </div>
+    <p class="muted small reveal">
+      Matrix counts were produced by <code>export_model.py</code> from models that reproduce the
+      notebook's accuracies exactly (0.8141025641025641 and 0.8257783882783882), because the
+      notebook prints precision and recall rounded to two decimals rather than the raw counts.
+      The original chart images are shown alongside for comparison.
+    </p>
+  </div>
+</section>
+
+<!-- ========================== FEATURES =========================== -->
+<section id="features" class="section section-alt">
+  <div class="container">
+    <p class="eyebrow reveal">04 &middot; Explainability</p>
+    <h2 class="reveal">Which URL features matter?</h2>
+    <p class="section-intro reveal">
+      Two different views of "importance". <strong>Correlation</strong> measures a straight-line
+      relationship between one feature and the label (cell 4 of the notebook).
+      <strong>Feature importance</strong> measures how much the Random Forest actually relied on
+      each feature when splitting its trees (cell 11).
+    </p>
+
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Correlation with the phishing label</h3>
+        <div class="chart-box tall"><canvas id="chart-correlation" aria-label="Horizontal bar chart of feature correlations with the phishing label" role="img"></canvas></div>
+        <p class="muted small">Only <code>n_redirection</code> is negative (−0.051); everything
+        else pushes towards phishing.</p>
+      </div>
+      <div class="card reveal">
+        <h3>Random Forest feature importance (top 10)</h3>
+        <div class="chart-box tall"><canvas id="chart-importance" aria-label="Horizontal bar chart of the top 10 feature importances" role="img"></canvas></div>
+        <p class="muted small">Three features — <strong>slashes, length and hyphens</strong> —
+        account for <strong>63.5%</strong> of the forest's decision making.</p>
+      </div>
+    </div>
+
+    <div class="card reveal">
+      <h3>All 19 features, ranked by importance</h3>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="num">#</th><th>Feature</th><th>What it counts</th>
+              <th class="num">Importance</th><th>Relative weight</th><th class="num">Correlation</th>
+            </tr>
+          </thead>
+          <tbody id="importance-table-body"></tbody>
+        </table>
+      </div>
+      <p class="muted small">Importance values come from <code>random_forest.feature_importances_</code>
+      and sum to 100%. Correlations are Pearson coefficients against the <code>phishing</code> label.
+      The dataset's original spellings (<code>n_hypens</code>, <code>n_hastag</code>) are preserved.</p>
+    </div>
+
+    <div class="card reveal">
+      <h3>Interpretation</h3>
+      <div class="grid-2 gap">
+        <div>
+          <h4>Slashes + length = structure</h4>
+          <p>A legitimate site usually sends you to a short homepage. A phishing page hides a
+          long, deep path such as <code>/accounts/verify/session/update</code>. That single idea
+          explains why <code>n_slash</code> (0.305 importance, 0.611 correlation) and
+          <code>url_length</code> (0.194, 0.430) dominate.</p>
+        </div>
+        <div>
+          <h4>Hyphens + dots = impostor domains</h4>
+          <p><code>n_hypens</code> (0.136) and <code>n_dots</code> (0.073) capture the classic
+          look-alike domain, where attackers stuff words and subdomains in front of a real brand
+          name to make the address <em>read</em> correctly while pointing somewhere else.</p>
+        </div>
+        <div>
+          <h4>Query characters = credential harvesting</h4>
+          <p><code>n_equal</code> (0.091), <code>n_and</code> (0.031) and
+          <code>n_questionmark</code> (0.020) rise when a URL carries parameters — typical of
+          pages that bounce your input through a script.</p>
+        </div>
+        <div>
+          <h4>Redirection is almost uninformative</h4>
+          <p><code>n_redirection</code> has importance 0.047 but a slightly <em>negative</em>
+          correlation (−0.051). The model uses it in a few splits, yet it does not reliably point
+          in either direction — a good example of why correlation alone is not feature importance.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card reveal">
+      <h3>Original notebook charts</h3>
+      <p class="muted">The exact figures produced when the notebook was executed — shown so the
+      website and the notebook can be checked against each other.</p>
+      <div id="notebook-gallery" class="nb-gallery"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== ANALYZER =========================== -->
+<section id="analyzer" class="section">
+  <div class="container">
+    <p class="eyebrow reveal">05 &middot; Interactive</p>
+    <h2 class="reveal">URL Analyzer</h2>
+    <p class="section-intro reveal">
+      Enter any web address and click <strong>Analyze URL</strong>. The page counts the same
+      19 features your dataset uses, then runs the <strong>real trained model</strong> — the
+      identical Decision Tree and Random Forest produced by <code>export_model.py</code> from
+      your notebook's pipeline — entirely inside your browser.
+    </p>
+
+    <div class="how-it-works reveal">
+      <div class="step"><span class="step-n">1</span><div><strong>Count</strong><p>The URL is converted into 19 numbers: length, dots, hyphens, slashes, query characters…</p></div></div>
+      <div class="step-arrow" aria-hidden="true">&rarr;</div>
+      <div class="step"><span class="step-n">2</span><div><strong>Feed</strong><p>The 19 numbers are passed to the exported forest, in the exact column order used for training.</p></div></div>
+      <div class="step-arrow" aria-hidden="true">&rarr;</div>
+      <div class="step"><span class="step-n">3</span><div><strong>Vote</strong><p>All 100 trees walk down to a leaf; their probabilities are averaged to produce the verdict.</p></div></div>
+    </div>
+
+    <div class="card analyzer-card reveal">
+      <form id="analyzer-form" class="analyzer-form" autocomplete="off">
+        <label for="url-input" class="form-label">Website URL</label>
+        <div class="input-row">
+          <input id="url-input" name="url" type="text" class="url-input"
+                 placeholder="https://example.com/login?session=1"
+                 spellcheck="false" autocapitalize="off" autocorrect="off">
+          <button id="analyze-button" class="btn btn-primary" type="submit">Analyze URL</button>
+        </div>
+
+        <fieldset class="model-choice">
+          <legend>Model</legend>
+          <label><input type="radio" name="analyzer-model" value="randomForest" checked>
+            Random Forest <span class="opt-note">82.58%</span></label>
+          <label><input type="radio" name="analyzer-model" value="decisionTree">
+            Decision Tree <span class="opt-note">81.41%</span></label>
+          <span id="model-status" class="model-status status-idle">Model loads the first time you analyze a URL</span>
+        </fieldset>
+
+        <div class="presets">
+          <span class="presets-label">Try an example:</span>
+          <div id="preset-list" class="preset-list"></div>
+        </div>
+      </form>
+
+      <div id="analyzer-result" class="analyzer-result" hidden aria-live="polite"></div>
+
+      <div class="feature-panel">
+        <h3>Your URL as 19 numbers</h3>
+        <p class="muted small">This table updates as soon as you submit a URL. These are simple
+        string counts — no prediction is involved at this stage.</p>
+        <div class="table-wrap">
+          <table class="data-table compact">
+            <thead><tr><th>Column name</th><th>Meaning</th><th class="num">Value</th></tr></thead>
+            <tbody id="feature-table-body">
+              <tr class="empty-row"><td colspan="3" class="muted">No URL analysed yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-info reveal">
+      <strong>Honest by design.</strong> There are no hardcoded answers in this page. If the
+      model file is missing, or the page is opened straight from the file system, the analyzer
+      says so and shows <em>no verdict at all</em> instead of guessing. The two model files are
+      generated by running <code>python export_model.py</code>, which re-executes your notebook's
+      training code and refuses to export unless it reproduces 81.41% and 82.58% exactly.
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ERRORS & IMPLICATIONS =================== -->
+<section id="errors" class="section section-alt">
+  <div class="container">
+    <p class="eyebrow reveal">06 &middot; When the model is wrong</p>
+    <h2 class="reveal">False positives, false negatives &amp; why they matter</h2>
+
+    <div class="grid-2">
+      <div class="card card-fp reveal">
+        <span class="err-icon" aria-hidden="true">&#128683;</span>
+        <h3>False positive <span class="err-sub">= legitimate site called phishing</span></h3>
+        <p class="err-number">570 <span>of 1,143 legitimate test URLs (49.9%)</span></p>
+        <p>The Random Forest blocked <strong>570</strong> perfectly safe URLs. The Decision Tree
+        blocked <strong>461</strong> (40.3%).</p>
+        <ul class="plain">
+          <li>The user is stopped from reaching a site they trust.</li>
+          <li>In a company, repeated false alarms train people to ignore warnings — including the real ones.</li>
+          <li>Cost: user frustration, support tickets, loss of trust in the tool.</li>
+        </ul>
+        <p class="muted small">Random Forest — precision 0.75 for the legitimate class: when it
+        says "legitimate" it is right three times in four.</p>
+      </div>
+
+      <div class="card card-fn reveal">
+        <span class="err-icon" aria-hidden="true">&#128684;</span>
+        <h3>False negative <span class="err-sub">= phishing site called legitimate</span></h3>
+        <p class="err-number">191 <span>of 3,225 phishing test URLs (5.9%)</span></p>
+        <p>The Random Forest let <strong>191</strong> real phishing pages through. The Decision
+        Tree let through <strong>351</strong> (10.9%).</p>
+        <ul class="plain">
+          <li>The victim reaches the fake page and may enter real credentials.</li>
+          <li>This is the error with direct financial and personal-data consequences.</li>
+          <li>Cost: account takeover, fraud, reputational damage, compliance exposure.</li>
+        </ul>
+        <p class="muted small">This is what "94% recall on phishing" means in practice: roughly
+        <strong>6 phishing sites in 100</strong> still get through.</p>
+      </div>
+    </div>
+
+    <div class="card reveal">
+      <h3>The trade-off, in one picture</h3>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Model</th><th class="num">False positives<br>(legit blocked)</th>
+            <th class="num">False negatives<br>(phishing missed)</th>
+            <th class="num">Total wrong</th><th>Character</th></tr></thead>
+          <tbody>
+            <tr><td>Decision Tree</td><td class="num">461 (40.3%)</td><td class="num">351 (10.9%)</td>
+              <td class="num">812</td><td>Balanced, misses more attacks</td></tr>
+            <tr><td>Random Forest</td><td class="num">570 (49.9%)</td><td class="num">191 (5.9%)</td>
+              <td class="num">761</td><td>Aggressive, catches more attacks</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        You cannot have both numbers at zero. Tighten the rules and you block safe sites; loosen
+        them and attackers slip through. Choosing where to sit on that curve is a
+        <strong>security policy decision, not just an accuracy number</strong> — an email gateway
+        in front of executives may prefer the aggressive model, while a browser extension
+        for the general public may prefer the balanced one.
+      </p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Cybersecurity implications</h3>
+        <ul class="checklist">
+          <li><strong>URL-only detection is cheap and fast.</strong> It needs no page download, no JavaScript execution and no screenshot — a link can be scored before a browser ever renders it.</li>
+          <li><strong>It is also narrow.</strong> A perfectly normal-looking URL can host a credential-harvesting page, and an odd-looking URL can be a legitimate tracking link.</li>
+          <li><strong>Attackers adapt.</strong> URL shorteners, free subdomains and brand-new domains can be crafted to look statistically ordinary. Static features lose value once attackers know which ones are watched.</li>
+          <li><strong>Defence in depth is required.</strong> Real phishing defence combines URL analysis with TLS certificate checks, domain age, page-content analysis, sender authentication (SPF/DKIM/DMARC), and — most importantly — user awareness.</li>
+        </ul>
+      </div>
+      <div class="card reveal">
+        <h3>Where this fits in a real defence</h3>
+        <div class="defence-stack">
+          <div class="layer l1"><strong>Layer 1 — URL heuristic (this project)</strong>
+            <span>Fast first filter: scores link structure in milliseconds.</span></div>
+          <div class="layer l2"><strong>Layer 2 — Domain &amp; certificate checks</strong>
+            <span>WHOIS age, TLS validity, blacklist reputation.</span></div>
+          <div class="layer l3"><strong>Layer 3 — Page-content analysis</strong>
+            <span>Forms, logos, brand impersonation, injected scripts.</span></div>
+          <div class="layer l4"><strong>Layer 4 — The human</strong>
+            <span>Training, reporting buttons, two-factor authentication.</span></div>
+        </div>
+        <p class="muted small">The project's own conclusion: URL-based machine learning can
+        <em>support</em> phishing detection, but it should never be the only protection.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= LIMITATIONS ========================== -->
+<section id="limitations" class="section">
+  <div class="container">
+    <p class="eyebrow reveal">07 &middot; Honest self-assessment</p>
+    <h2 class="reveal">Limitations of this project</h2>
+    <p class="section-intro reveal">
+      A 10–15 minute presentation should be as clear about what the project <em>cannot</em> do as
+      about what it can. These are the constraints that matter most.
+    </p>
+
+    <div class="grid-2">
+      <div class="card reveal">
+        <h3>Limitations of the data</h3>
+        <ul class="limits">
+          <li><strong>Only numeric URL counts.</strong> The dataset has no page content, no
+            screenshots, no TLS certificate details, no domain registration age and no traffic
+            signals — all of which real anti-phishing systems use.</li>
+          <li><strong>Massive duplication.</strong> 78,186 of 100,077 rows (78%) were exact
+            duplicates. Removing them was correct, but it shrank the usable data to 21,891 rows.</li>
+          <li><strong>Conflicting labels.</strong> 1,913 identical feature combinations carry
+            <em>both</em> labels, so a perfect score on this data is impossible — some rows are
+            genuinely ambiguous when only counts are available.</li>
+          <li><strong>Class imbalance.</strong> After cleaning, 72.6% of rows are phishing.
+            Accuracy is therefore inflated: answering "phishing" every time already gives
+            73.83% on the test set.</li>
+          <li><strong>One source.</strong> A single Kaggle dataset of unknown collection window;
+            results may not transfer to today's URLs.</li>
+        </ul>
+      </div>
+
+      <div class="card reveal">
+        <h3>Limitations of the method</h3>
+        <ul class="limits">
+          <li><strong>One split, no cross-validation.</strong> Accuracy comes from a single
+            80/20 split (<code>random_state=42</code>), so there is no confidence interval.
+            A different split could move the numbers by a point or two.</li>
+          <li><strong>Small gap between models.</strong> 82.58% vs 81.41% is
+            1.17 percentage points on 4,368 URLs (51 more correct). That is suggestive, but it has
+            not been tested for statistical significance.</li>
+          <li><strong>Still ~1 in 6 predictions wrong.</strong> 761 of 4,368 test URLs were
+            misclassified by the best model.</li>
+          <li><strong>Fixed hyper-parameters.</strong> <code>max_depth=10</code> and
+            <code>n_estimators=100</code> were chosen by hand; no grid search or tuning was
+            performed, so neither model is necessarily optimal.</li>
+          <li><strong>Unsupervised feature construction.</strong> The 19 features are hand-made
+            counts; a modern approach might learn representations directly from raw URLs.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card reveal">
+      <h3>Limitations of this website's analyzer</h3>
+      <ul class="limits">
+        <li><strong>Feature extraction is a reconstruction.</strong> The dataset publishes only
+          the 19 counts — never the original URL strings — so the analyzer <em>recreates</em> them
+          from an entered URL. Two conventions were inferred from the data: the stored strings
+          appear to include the scheme (rows with <code>n_redirection = -1</code> are about 10
+          characters shorter than the rest), and <code>n_slash</code> excludes the two slashes
+          inside <code>://</code> (which is what allows legitimate URLs to average just 0.29
+          slashes). <code>n_redirection</code> is interpreted as "number of <code>://</code>
+          markers minus one". For an ordinary URL both conventions agree; for unusual inputs the
+          counts may differ slightly from how the original rows were generated.</li>
+        <li><strong>The model inherits every bias above.</strong> 82.58% accuracy means roughly
+          one URL in six receives the wrong label, and the Random Forest wrongly flags about
+          half of all legitimate sites.</li>
+        <li><strong>Out-of-distribution inputs.</strong> Paste a URL far outside the training
+          range (very long, unusual characters) and the model still answers — with a number that
+          has little meaning. The probability shown is a vote among trees, not a guarantee.</li>
+        <li><strong>Educational use only.</strong> This is a course project. Do not rely on it to
+          protect any real system; it is not a substitute for a maintained anti-phishing product.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============================ FOOTER =========================== -->
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <h4>Machine Learning-Based Phishing Website Detection</h4>
+      <p class="muted">An educational cybersecurity project demonstrating URL-based phishing
+      detection with a Decision Tree and a Random Forest.</p>
+    </div>
+    <div>
+      <h4>Project files</h4>
+      <ul class="footer-links">
+        <li><a href="https://github.com/joselync12/Phishing-Website-Detection/blob/main/Phishing_Website_Analysis.ipynb" target="_blank" rel="noopener">Jupyter notebook (analysis &amp; models)</a></li>
+        <li><a href="https://github.com/joselync12/Phishing-Website-Detection/blob/main/Phishing_Website_Detection.pdf" target="_blank" rel="noopener">Final report (PDF)</a></li>
+        <li><a href="https://github.com/joselync12/Phishing-Website-Detection/blob/main/Phishing_Website_Detection___Proposal.pdf" target="_blank" rel="noopener">Project proposal (PDF)</a></li>
+        <li><a href="https://github.com/joselync12/Phishing-Website-Detection/blob/main/README.md" target="_blank" rel="noopener">README</a></li>
+        <li><a href="https://github.com/joselync12/Phishing-Website-Detection/blob/main/WEBSITE_GUIDE.md" target="_blank" rel="noopener">Website guide — run &amp; publish</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Credits</h4>
+      <ul class="footer-links">
+        <li>Dataset: <a href="https://www.kaggle.com/datasets/danielfernandon/web-page-phishing-dataset" target="_blank" rel="noopener">Web Page Phishing Dataset, Kaggle</a></li>
+        <li>Libraries: Pandas, Scikit-learn, Matplotlib, Chart.js</li>
+      </ul>
+      <p class="muted small">All statistics shown on this page are the executed outputs of
+      <code>Phishing_Website_Analysis.ipynb</code>. AI assistance was used for code guidance,
+      debugging and report organisation.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="js/results-data.js"></script>
+<script src="vendor/chart.umd.min.js"></script>
+<script src="js/analyzer.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
